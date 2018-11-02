@@ -1,0 +1,4 @@
+
+export const FETCH_TAGS = 'FETCH_TAGS';
+export const FETCH_SUCCEEDED = 'FETCH_SUCCEEDED';
+export const FETCH_FAILED = 'FETCH_FAILED';

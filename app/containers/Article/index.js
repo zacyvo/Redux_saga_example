@@ -1,0 +1,213 @@
+import React from "react"
+import saga from "./saga"
+import reducer from "./reducer"
+import {connect} from "react-redux"
+import {compose} from "redux"
+import injectSaga from "../../utils/injectSaga"
+import injectReducer from "../../utils/injectReducer"
+import {fetchArticle} from "./actions"
+import {formatDate} from "../App/function"
+import {activeHeader} from "../Header/actions"
+import {fetchComment} from "../ListComment/actions"
+import {Link} from "react-router-dom"
+import agent from "../agent"
+import ButtonFollow from "../../components/ButtonFollow"
+import ButtonFavorite from "../../components/ButtonFavorite"
+import Comments from "../ListComment/index"
+class Article extends React.Component{
+  constructor(props){
+    super(props)
+  }
+  state={user:{},loadingFollow:false,loadingFavorite:false}
+  async componentWillMount(){
+    let articleSlug = this.props.match.params.slug
+    this.props.onFetchArticle(articleSlug)
+    this.props.onFetchComments(articleSlug)
+    this.props.onHandleChange("")
+    let token = localStorage.getItem("jwt")
+    if (token) {
+      agent.setToken(token);
+      let data = await agent.Auth.current()
+      this.setState({user:data.user})
+    }else{
+      this.setState({user:{}})
+    }
+  }
+  handleClickLink(e){
+    switch (e) {
+      case "HOME":
+      this.props.onHandleChange("HOME")
+      this.props.history.push("/")
+        break;
+      case "SIGN_IN":
+        this.props.onHandleChange("SIGN_IN")
+        this.props.history.push("/login")
+          break;
+      case "SIGN_UP":
+        this.props.onHandleChange("SIGN_UP")
+        this.props.history.push("/signup")
+          break;
+      default:
+        break;
+    }
+  }
+  async handleClickFllow(){
+    const {user} = this.state
+    const {article} = this.props
+    if(user.username){
+      this.setState({loadingFollow:true})
+      await agent.Profile.follow(article.author.username)
+      this.props.onFetchArticle(article.slug)
+      this.setState({loadingFollow:false})
+    }else{  
+      this.props.onHandleChange("SIGN_UP")
+      this.props.history.push("/signup")
+    }
+  }
+  async handleClickUnfllow(){
+    const {article} = this.props
+    this.setState({loadingFollow:true})
+    await agent.Profile.unfollow(article.author.username)
+    this.props.onFetchArticle(article.slug)
+    this.setState({loadingFollow:false})
+  }
+  async handleClickFavorite(){
+    const {user} = this.state
+    const {article} = this.props
+    if(user.username){
+      this.setState({loadingFavorite:true})
+      await agent.Articles.favorite(article.slug)
+      this.props.onFetchArticle(article.slug)
+      this.setState({loadingFavorite:false})
+    }else{
+      this.props.onHandleChange("SIGN_UP")
+      this.props.history.push("/signup")
+    }
+  }
+  async handleClickUnfavorite(){
+    const {article} = this.props
+    this.setState({loadingFavorite:true})
+    await agent.Articles.unfavorite(article.slug)
+    this.props.onFetchArticle(article.slug)
+    this.setState({loadingFavorite:false})
+  }
+  render(){
+    const {article} = this.props
+    const {loadingFollow,loadingFavorite,user} = this.state
+    return(
+      <div className="article-page">
+        <div className="banner">
+          <div className="container">
+            <h1>{article.title}</h1>
+            <div className="article-meta">
+              <Link to={`/@${article.author?article.author.username:""}`}><img src={article.author?article.author.image:""} /></Link>
+              <div className="info">
+                <Link to={`/@${article.author?article.author.username:""}`} className="author">{article.author?article.author.username:""}</Link>
+                <span className="date">{formatDate(article.createdAt)}</span>
+              </div>
+              <ButtonFollow 
+                author={article.author}
+                loading = {loadingFollow}
+                handleClickFllow={this.handleClickFllow.bind(this)}
+                handleClickUnfllow={this.handleClickUnfllow.bind(this)}
+              />
+              <ButtonFavorite
+                article={article}
+                loading = {loadingFavorite}
+                handleClickFavorite={this.handleClickFavorite.bind(this)}
+                handleClickUnfavorite={this.handleClickUnfavorite.bind(this)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="container page">
+
+          <div className="row article-content">
+            <div className="col-md-12">
+              <div dangerouslySetInnerHTML={{ __html: article.body }}></div>              
+            </div>
+          </div>
+
+          <hr />
+
+          <div className="article-actions">
+            <div className="article-meta">
+              <Link to={`/@${article.author?article.author.username:""}`}><img src={article.author?article.author.image:""} /></Link>
+              <div className="info">
+                <Link to={`/@${article.author?article.author.username:""}`} className="author" >{article.author?article.author.username:""}</Link>
+                <span className="date">{formatDate(article.createdAt)}</span>
+              </div>
+
+              <ButtonFollow 
+                author={article.author}
+                loading = {loadingFollow}
+                handleClickFllow={this.handleClickFllow.bind(this)}
+                handleClickUnfllow={this.handleClickUnfllow.bind(this)}
+              />
+              <ButtonFavorite
+                article={article}
+                loading = {loadingFavorite}
+                handleClickFavorite={this.handleClickFavorite.bind(this)}
+                handleClickUnfavorite={this.handleClickUnfavorite.bind(this)}
+              />
+            </div>
+          </div>
+          {user.username?
+          <div className="row">
+            <div className="col-xs-12 col-md-8 offset-md-2">
+              <form className="card comment-form">
+                <div className="card-block">
+                  <textarea className="form-control" placeholder="Write a comment..." rows="3"></textarea>
+                </div>
+                <div className="card-footer">
+                  <img src={user.image} className="comment-author-img" />
+                  <button className="btn btn-sm btn-primary">
+                  Post Comment
+                  </button>
+                </div>
+              </form>
+              <Comments />
+            </div>
+          </div>:
+          <div class="row">
+            <div class="col-xs-12 col-md-8 offset-md-2">
+              <p style={{display: "inherit"}}>
+                <a style={{color:"green"}} onClick={()=>{this.handleClickLink("SIGN_IN")}}>Sign in</a> or 
+                <a style={{color:"green"}} onClick={()=>{this.handleClickLink("SIGN_UP")}}> sign up</a> to add comments on this article.
+              </p>
+            </div>
+          </div>}
+        </div>
+      </div>
+    )
+  }
+}
+const mapStateToProps = (state)=>{
+  console.log("comments",state.get("CommentsReducer"));
+  return {article : state.get("ActicleReducer")&&state.get("ActicleReducer").article?state.get("ActicleReducer").article : {},}
+}
+const mapDispatchToProps = (dispatch) =>{
+   return {
+     onFetchArticle:(articleSlug)=>{
+       dispatch(fetchArticle(articleSlug))
+     },
+     onHandleChange: (activeName) =>{
+      dispatch(activeHeader(activeName))
+    },
+    onFetchComments:(articleSlug)=>{
+      dispatch(fetchComment(articleSlug))
+    }
+   }
+}
+const withConnect = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)
+const withReducer = injectReducer({ key:'ActicleReducer', reducer });
+const withSaga = injectSaga ({key:"ArticleSaga",saga})
+export default compose(
+  withConnect,
+  withReducer,
+  withSaga
+)(Article)

@@ -1,0 +1,13 @@
+fieldset{
+    border: unset !important
+}
+a{
+    cursor: pointer;
+}
+footer{
+  margin-top: 0 !important;
+  bottom: unset !important;
+}
+.author{
+  color: green !important
+}
