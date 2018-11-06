@@ -1,0 +1,2 @@
+
+export const ACTIVE_HEADER = 'ACTIVE_HEADER';

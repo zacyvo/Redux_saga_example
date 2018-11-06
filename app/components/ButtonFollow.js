@@ -2,8 +2,14 @@ import React from "react"
 
 export default class ButtonFollow extends React.Component{
   render(){
-    const {author,loading} = this.props
+    const {author,loading,own} = this.props
     return(
+      own?
+      <button style={{marginRight:"10px"}} disabled={loading} onClick={()=>this.props.handleClickEditArticle()} className="btn btn-outline-secondary btn-sm">
+        <i className="ion-edit"></i>
+        &nbsp;
+        Edit Article
+      </button>:
       author&&author.following?
         <button style={{marginRight:"10px"}} disabled={loading} onClick={()=>this.props.handleClickUnfllow()} className="btn btn-sm btn-outline-secondary">
           <i className="ion-plus-round"></i>

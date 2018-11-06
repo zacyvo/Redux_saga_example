@@ -1,7 +1,8 @@
-export const formatDate = (date) =>{
+export const formatDate = (date,showYear=false) =>{
   let day = new Date(date)
   const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
   ];
-  return monthNames[day.getMonth()]+" "+day.getDate()+"th"
+  let year = showYear?day.getFullYear():""
+  return monthNames[day.getMonth()]+" "+day.getDate()+"th " + year
 } 

@@ -14,6 +14,7 @@ import NotFoundPage from 'containers/NotFoundPage/Loadable';
 import LoginPage from 'containers/LoginPage/Loadable';
 import SignupPage from 'containers/SignupPage/Loadable';
 import Setting from 'containers/Setting/Loadable';
+import Editor from 'containers/Editor/Loadable';
 import Profile from 'containers/Profile/Loadable';
 import GlobalStyle from '../../global-styles';
 import Header from "../Header/Header"
@@ -45,10 +46,12 @@ import agent from "../agent"
             {!user?<Route path="/signup" component={SignupPage} />:""}
             {!user?<Route path="/login" component={LoginPage} />:""}
             {user?<Route path="/settings" component={Setting} />:""}
+            <Route path="/editor/:id" component={Editor} />
+            <Route path="/editor" component={Editor} />
             <Route path="/@:username/favorites" component={Profile} />
             <Route path="/@:username" component={Profile} />
             <Route exact path="/" component={HomePage} />
-            <Route component={NotFoundPage} />
+            <Route component={HomePage} />
           </Switch>
         </div>
         <Footer/>

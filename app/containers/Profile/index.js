@@ -5,7 +5,7 @@ import {connect} from "react-redux"
 import {compose} from "redux"
 import injectSaga from "../../utils/injectSaga"
 import injectReducer from "../../utils/injectReducer"
-import {fetchProfile,fetchArticlesByAuthor} from "./actions"
+import {fetchProfile,fetchArticlesByAuthor,fetchArticlesFavoriteByAuthor} from "./actions"
 import {activeHeader} from "../Header/actions"
 import UserInfo from "../../components/UserInfo"
 import Articles from "../../components/Articles"
@@ -19,23 +19,38 @@ class Profile extends React.Component{
   state={
     isFavorites:""
   }
-  async componentWillMount(){
+  async componentDidMount(){
     let username = this.props.match.params.username
     let patch = window.location.pathname.split("/")
     if(patch[2]){
       this.setState({isFavorites:true})
+      await this.props.onFetchArticlesFavoriteByAuthor(1,username)
+    }else{
+      await this.props.onFetchArticlesByAuthor(1,username)
     }
     await this.props.onFetchProfile(username)
   }
-  componentWillReceiveProps(){
-    let patch = window.location.pathname.split("/")
-    if(patch[2]){
-      this.setState({isFavorites:true})
-    }else{
+  async componentWillReceiveProps(nextProps){
+    let username = this.props.match.params.username
+    let userName = nextProps.match.params.username
+    if(userName!==username){
+      nextProps.onFetchProfile(userName)
+      await nextProps.onFetchArticlesByAuthor(1,userName)
       this.setState({isFavorites:false})
     }
   }
-  
+
+  async handleClickTabFavorite(){
+    const {isFavorites} = this.state
+    const {profile} = this.props
+    if(isFavorites){
+      await this.props.onFetchArticlesByAuthor(1,profile.username)
+      this.setState({isFavorites:false})
+    }else{
+      await this.props.onFetchArticlesFavoriteByAuthor(1,profile.username)
+      this.setState({isFavorites:true})
+    }
+  }
   handleClickLink(e){
     switch (e) {
       case "HOME":
@@ -54,17 +69,25 @@ class Profile extends React.Component{
         break;
     }
   }
-  handleClickArticle(){
-
+  handleClickArticle(e){
+    let article = JSON.parse(e)
+    this.props.history.push(`/article/${article.slug}`)
+  }
+  handleClickSetting(){
+    this.props.onHandleChange("SETTING")
+    this.props.history.push("/settings")
+  }
+  handleClickFollow(){
+    
   }
   render(){
     const {profile,articles} = this.props
     const {isFavorites} = this.state
-    console.log("here",profile);
-    
     return(
       <div class="profile-page">
         <UserInfo 
+        handleClickSetting={this.handleClickSetting.bind(this)}
+        handleClickFollow={this.handleClickFollow.bind(this)}
         profile={profile}/>
         <div class="container">
           <div class="row">
@@ -72,16 +95,16 @@ class Profile extends React.Component{
               <div class="articles-toggle">
                 <ul class="nav nav-pills outline-active">
                   <li class="nav-item">
-                    <Link to={`/@${profile.username}`}  class={`nav-link ${isFavorites?"":"active"}`}>My Articles</Link>
+                    <Link onClick={this.handleClickTabFavorite.bind(this)} to={`/@${profile.username}`}  class={`nav-link ${isFavorites?"":"active"}`}>My Articles</Link>
                   </li>
                   <li class="nav-item">
-                    <Link to={`/@${profile.username}/favorites`} class={`nav-link ${isFavorites?"active":""}`} >Favorited Articles</Link>
+                    <Link onClick={this.handleClickTabFavorite.bind(this)} to={`/@${profile.username}/favorites`} class={`nav-link ${isFavorites?"active":""}`} >Favorited Articles</Link>
                   </li>
                 </ul>
               </div>
               <Articles 
                 loading={false} 
-                articles={[]} 
+                articles={articles?articles:[]} 
                 handleClickArticle={this.handleClickArticle.bind(this)}
                 />
             </div>
@@ -93,8 +116,8 @@ class Profile extends React.Component{
 }
 const mapStateToProps = (state)=>{
   return {
-    profile : state.get("ProfileReducer")&&state.get("ProfileReducer").profile?state.get("ProfileReducer").profile : {},
-    /* articles: state.get("HomePageReducer")? state.get("HomePageReducer") : {},  */
+    profile : state.get("ProfileReducer")&&state.get("ProfileReducer").profile.profile?state.get("ProfileReducer").profile.profile : {},
+    articles : state.get("ProfileReducer")&&state.get("ProfileReducer").articles&&state.get("ProfileReducer").articles.articles?state.get("ProfileReducer").articles.articles : [],
   }
 }
 const mapDispatchToProps = (dispatch) =>{
@@ -107,6 +130,9 @@ const mapDispatchToProps = (dispatch) =>{
     },
     onFetchArticlesByAuthor:(numberPage,username)=>{
       dispatch(fetchArticlesByAuthor(numberPage,username))
+    },
+    onFetchArticlesFavoriteByAuthor:(numberPage,username)=>{
+      dispatch(fetchArticlesFavoriteByAuthor(numberPage,username))
     },
    }
 }

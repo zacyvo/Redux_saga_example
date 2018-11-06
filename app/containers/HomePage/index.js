@@ -9,7 +9,8 @@ import injectSaga from '../../utils/injectSaga';
 import injectReducer from '../../utils/injectReducer';
 import reducer from './reducer';
 import saga from './saga';
-import {fetchArticles} from "./actions"
+import {fetchArticles,fetchUpdateArticles} from "./actions"
+import {activeHeader} from "../Header/actions"
 import agent from "../agent"
 class HomePage extends React.Component {
   state ={
@@ -17,9 +18,18 @@ class HomePage extends React.Component {
     loadingArticles:false,
     activePagination:1,
     articlesCount:0,
-    tagSelected:""
+    tagSelected:"",
+    user:{}
   }
   async componentDidMount(){
+    let token = localStorage.getItem("jwt")
+    if (token) {
+      agent.setToken(token);
+      let data = await agent.Auth.current()
+      this.setState({user:data.user})
+    }else{
+      this.setState({user:{}})
+    }
     let tagsOjb = await agent.Tags.getAll()
     this.setState({tags:tagsOjb.tags})
     this.props.onFetchArticles(1)
@@ -37,6 +47,17 @@ class HomePage extends React.Component {
   handleClickArticle(e){
     let article = JSON.parse(e)
     this.props.history.push(`/article/${article.slug}`)
+  }
+  handleClickFavorite(e,index){
+    const {user} = this.state
+    if(user.id){
+      let article = JSON.parse(e)
+      this.props.onUpdateArticle(article.slug)
+    }
+    else{
+      this.props.onHandleClickLink("SIGN_UP")
+      this.props.history.push('/signup')
+    }
   }
   handleClickUser(e){
     let user = JSON.parse(e)
@@ -69,6 +90,7 @@ class HomePage extends React.Component {
                   </ul>
                 </div>
                 <Articles 
+                handleClickFavorite={this.handleClickFavorite.bind(this)}
                 loading={loadingArticles} 
                 articles={articles.articles?articles.articles:[]} 
                 handleClickArticle={this.handleClickArticle.bind(this)}
@@ -101,7 +123,13 @@ const mapDispatchToProps = (dispatch) =>{
   return {
     onFetchArticles: (pageNumber,tag) =>{
       dispatch(fetchArticles(pageNumber,tag))
-    }
+    },
+    onUpdateArticle:(slug)=>{
+      dispatch(fetchUpdateArticles(slug))
+    },
+    onHandleClickLink: (activeName) =>{
+      dispatch(activeHeader(activeName))
+    },
   } 
 }
 const withConnect = connect(

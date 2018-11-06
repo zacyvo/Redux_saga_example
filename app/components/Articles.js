@@ -1,5 +1,6 @@
 import React from "react"
 import {formatDate} from "../containers/App/function"
+import {Link} from "react-router-dom"
 export default class Articles extends React.Component{
   render(){
     const {articles,loading} = this.props
@@ -10,16 +11,16 @@ export default class Articles extends React.Component{
           return(
           <div key={index} className="article-preview">
             <div className="article-meta">
-              <a onClick={()=>this.props.handleClickUser(JSON.stringify(article.author))}><img src={article.author.image} /></a>
+              <Link to={`/@${article.author.username}`}><img src={article.author.image} /></Link>
               <div className="info">
-                <a onClick={()=>this.props.handleClickUser(JSON.stringify(article.author))} className="author">{article.author.username}</a>
+                <Link to={`/@${article.author.username}`} className="author">{article.author.username}</Link>
                 <span className="date">{formatDate(article.updatedAt)}</span>
               </div>
-              <button className="btn btn-outline-primary btn-sm pull-xs-right">
+              <button onClick={()=>this.props.handleClickFavorite(JSON.stringify(article),index)} className={`btn ${article.favorited?"btn-primary":"btn-outline-primary"} btn-sm pull-xs-right`}>
                 <i className="ion-heart"></i> {article.favoritesCount}
               </button>
             </div>
-            <a onClick={()=>{this.props.handleClickArticle(JSON.stringify(article))}} className="preview-link">
+            <Link to={`/article/${article.slug}`} className="preview-link">
               <h1>{article.title}</h1>
               <p>{article.description}</p>
               <span>Read more...</span>
@@ -32,7 +33,7 @@ export default class Articles extends React.Component{
                   </li>
                   )})}
               </ul>:""}
-            </a>
+            </Link>
           </div>
           )}):
           <div className="article-preview ng-hide">

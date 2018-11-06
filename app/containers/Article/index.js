@@ -5,10 +5,9 @@ import {connect} from "react-redux"
 import {compose} from "redux"
 import injectSaga from "../../utils/injectSaga"
 import injectReducer from "../../utils/injectReducer"
-import {fetchArticle} from "./actions"
+import {fetchArticle,fetchComment,submitComment,delComment} from "./actions"
 import {formatDate} from "../App/function"
 import {activeHeader} from "../Header/actions"
-import {fetchComment} from "../ListComment/actions"
 import {Link} from "react-router-dom"
 import agent from "../agent"
 import ButtonFollow from "../../components/ButtonFollow"
@@ -18,7 +17,7 @@ class Article extends React.Component{
   constructor(props){
     super(props)
   }
-  state={user:{},loadingFollow:false,loadingFavorite:false}
+  state={user:{},loadingFollow:false,loadingFavorite:false,textComment:""}
   async componentWillMount(){
     let articleSlug = this.props.match.params.slug
     this.props.onFetchArticle(articleSlug)
@@ -53,7 +52,7 @@ class Article extends React.Component{
   }
   async handleClickFllow(){
     const {user} = this.state
-    const {article} = this.props
+    const {article} = this.props.data.article
     if(user.username){
       this.setState({loadingFollow:true})
       await agent.Profile.follow(article.author.username)
@@ -65,7 +64,7 @@ class Article extends React.Component{
     }
   }
   async handleClickUnfllow(){
-    const {article} = this.props
+    const {article} = this.props.data.article
     this.setState({loadingFollow:true})
     await agent.Profile.unfollow(article.author.username)
     this.props.onFetchArticle(article.slug)
@@ -73,7 +72,7 @@ class Article extends React.Component{
   }
   async handleClickFavorite(){
     const {user} = this.state
-    const {article} = this.props
+    const {article} = this.props.data.article
     if(user.username){
       this.setState({loadingFavorite:true})
       await agent.Articles.favorite(article.slug)
@@ -85,15 +84,54 @@ class Article extends React.Component{
     }
   }
   async handleClickUnfavorite(){
-    const {article} = this.props
+    const {article} = this.props.data.article
     this.setState({loadingFavorite:true})
     await agent.Articles.unfavorite(article.slug)
     this.props.onFetchArticle(article.slug)
     this.setState({loadingFavorite:false})
   }
+  async handleSubmitPostComment(e){
+    e.preventDefault()
+    const{textComment} = this.state
+    const {article} = this.props.data.article
+    let comment = {
+      body:textComment
+    }
+    this.props.onSubmitComment(article.slug,comment)
+    this.setState({textComment:""})
+  }
+  async handleClickDelComment (e){
+    let comment = JSON.parse(e)
+    const {article} = this.props.data.article
+    if(article.slug&&comment.id){
+      this.props.onDelComment(article.slug,comment.id)
+    }
+  }
+  handleClickEditArticle(){
+    const {article} = this.props.data.article
+    this.props.history.push(`/editor/${article.slug}`)
+  }
+  async handleClickDelArticle(){
+    this.setState({loadingFavorite:true})
+    const {article} = this.props.data.article
+    try{
+      await agent.Articles.del(article.slug)
+      this.props.history.push("/")
+    }catch(error){
+
+    }
+  }
   render(){
-    const {article} = this.props
-    const {loadingFollow,loadingFavorite,user} = this.state
+    const {data} = this.props
+    const {loadingFollow,loadingFavorite,user,textComment} = this.state
+    let article = {title:""}
+    let comments = []
+    if(data&&data.article){
+      if(data.article&&data.article.article)
+      article = data.article.article
+      if(data.comments&&data.comments.comments)
+      comments = data.comments.comments
+    }
     return(
       <div className="article-page">
         <div className="banner">
@@ -106,14 +144,18 @@ class Article extends React.Component{
                 <span className="date">{formatDate(article.createdAt)}</span>
               </div>
               <ButtonFollow 
+                own={article.author&&user.username===article.author.username}
                 author={article.author}
                 loading = {loadingFollow}
+                handleClickEditArticle={this.handleClickEditArticle.bind(this)}
                 handleClickFllow={this.handleClickFllow.bind(this)}
                 handleClickUnfllow={this.handleClickUnfllow.bind(this)}
               />
               <ButtonFavorite
+                own={article.author&&user.username===article.author.username}
                 article={article}
                 loading = {loadingFavorite}
+                handleClickDelArticle={this.handleClickDelArticle.bind(this)}
                 handleClickFavorite={this.handleClickFavorite.bind(this)}
                 handleClickUnfavorite={this.handleClickUnfavorite.bind(this)}
               />
@@ -140,14 +182,18 @@ class Article extends React.Component{
               </div>
 
               <ButtonFollow 
+                own={article.author&&user.username===article.author.username}
                 author={article.author}
                 loading = {loadingFollow}
+                handleClickEditArticle={this.handleClickEditArticle.bind(this)}
                 handleClickFllow={this.handleClickFllow.bind(this)}
                 handleClickUnfllow={this.handleClickUnfllow.bind(this)}
               />
               <ButtonFavorite
+                own={article.author&&user.username===article.author.username}
                 article={article}
                 loading = {loadingFavorite}
+                handleClickDelArticle={this.handleClickDelArticle.bind(this)}
                 handleClickFavorite={this.handleClickFavorite.bind(this)}
                 handleClickUnfavorite={this.handleClickUnfavorite.bind(this)}
               />
@@ -156,9 +202,15 @@ class Article extends React.Component{
           {user.username?
           <div className="row">
             <div className="col-xs-12 col-md-8 offset-md-2">
-              <form className="card comment-form">
+              <form onSubmit={this.handleSubmitPostComment.bind(this)} className="card comment-form">
                 <div className="card-block">
-                  <textarea className="form-control" placeholder="Write a comment..." rows="3"></textarea>
+                  <textarea
+                  required
+                  value={textComment}
+                  onChange={(e)=>{this.setState({textComment:e.target.value})}}
+                  className="form-control" 
+                  placeholder="Write a comment..." rows="3">
+                  </textarea>
                 </div>
                 <div className="card-footer">
                   <img src={user.image} className="comment-author-img" />
@@ -167,7 +219,7 @@ class Article extends React.Component{
                   </button>
                 </div>
               </form>
-              <Comments />
+              <Comments handleClickDelComment={this.handleClickDelComment.bind(this)} username={user.username} comments = {comments} />
             </div>
           </div>:
           <div class="row">
@@ -184,8 +236,9 @@ class Article extends React.Component{
   }
 }
 const mapStateToProps = (state)=>{
-  console.log("comments",state.get("CommentsReducer"));
-  return {article : state.get("ActicleReducer")&&state.get("ActicleReducer").article?state.get("ActicleReducer").article : {},}
+  return {
+    data : state.get("ActicleReducer"),
+  }
 }
 const mapDispatchToProps = (dispatch) =>{
    return {
@@ -197,7 +250,14 @@ const mapDispatchToProps = (dispatch) =>{
     },
     onFetchComments:(articleSlug)=>{
       dispatch(fetchComment(articleSlug))
-    }
+    },
+    onSubmitComment:(articleSlug,comment)=>{
+      dispatch(submitComment(articleSlug,comment))
+    },
+    onDelComment:(articleSlug,commentId)=>{
+      dispatch(delComment(articleSlug,commentId))
+    },
+    
    }
 }
 const withConnect = connect(
